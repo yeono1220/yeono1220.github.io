@@ -158,8 +158,18 @@ time,
 .clock-tick { stroke: var(--ink-faint); stroke-width: 1px; }
 .clock-tick.is-decade { stroke: var(--ink-muted); stroke-width: 1.5px; }
 .clock-num { fill: var(--ink-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; }
-.globe { fill: var(--planet); }
 .globe-face { stroke-width: 1px; stroke-linejoin: round; }
+.globe-faces { opacity: 0.92; }
+.globe-atmo { fill: #6f9ae8; opacity: 0.08; }
+.globe-shine { mix-blend-mode: screen; }
+.momo-aura { fill: url(#momoSoulG); opacity: 0.35; }
+.momo-body { fill: rgba(255, 255, 255, 0.34); stroke: rgba(255, 255, 255, 0.9); stroke-width: 1px; }
+.momo-soul { fill: url(#momoSoulG); }
+.momo-shine { fill: #fff; opacity: 0.7; }
+.momo-eye { fill: #1a1a1a; }
+.momo-bob { animation: momo-bob 2.2s ease-in-out infinite; }
+@keyframes momo-bob { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.5px) scale(1.03, 0.97); } }
+@media (prefers-reduced-motion: reduce) { .momo-bob { animation: none; } }
 
 .clock-center {
   position: absolute;
@@ -199,14 +209,14 @@ time,
 }
 
 /* 처음 한 번: 호가 그려진 뒤 왕자와 숫자가 나타난다 */
-.life-clock .figure,
+.life-clock .momo,
 .life-clock .globe,
 .life-clock .clock-center {
   opacity: 0;
   transition: opacity 0.9s ease 1.1s;
 }
 
-.life-clock.is-ready .figure,
+.life-clock.is-ready .momo,
 .life-clock.is-ready .globe,
 .life-clock.is-ready .clock-center {
   opacity: 1;

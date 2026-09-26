@@ -52,6 +52,32 @@
     return g;
   }
 
+  // innerverse의 7분기 행성 색 (glass-momo/constants.ts BRANCH 와 같은 값)
+  const BRANCH = {
+    bloom: { tint: "#5fc88a", soul: "#7fe0a8" },
+    calm: { tint: "#6f9ae8", soul: "#9ec8ff" },
+    love: { tint: "#e87fb8", soul: "#f7b0d4" },
+    wither: { tint: "#8a6f6a", soul: "#b08a82" },
+    rage: { tint: "#e8744e", soul: "#f0946a" },
+    tense: { tint: "#d99a4e", soul: "#f0b46a" },
+    void: { tint: "#8a82a0", soul: "#b0aac4" },
+  };
+  const MOOD = BRANCH[body.dataset.mood] || BRANCH.calm;
+  const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+
+  // 글래스 모모: 달걀형 유리 바디 + 안에서 빛나는 영혼 코어 + 검은 점 눈. 발이 (0,0).
+  function drawMomo(parent, transform) {
+    const g = svg("g", { class: "momo", transform }, parent);
+    const b = svg("g", { class: "momo-bob" }, g);
+    svg("circle", { cx: 0, cy: -16, r: 22, class: "momo-aura" }, b);
+    svg("ellipse", { cx: 0, cy: -16, rx: 12.5, ry: 15.5, class: "momo-body" }, b);
+    svg("circle", { cx: 0, cy: -15, r: 9, class: "momo-soul" }, b);
+    svg("ellipse", { cx: -4.5, cy: -24, rx: 3.2, ry: 4.6, class: "momo-shine" }, b);
+    svg("circle", { cx: -4.2, cy: -14, r: 1.5, class: "momo-eye" }, b);
+    svg("circle", { cx: 4.2, cy: -14, r: 1.5, class: "momo-eye" }, b);
+    return g;
+  }
+
   function drawRose(parent, transform) {
     const g = svg("g", { class: "rose", transform }, parent);
     svg("path", { class: "rose-stem", d: "M0 0 L0 -14 M0 -7 L4 -9" }, g);
@@ -100,6 +126,18 @@
     const cx = 160, cy = 160, R = 140;
     const root = svg("svg", { viewBox: "0 0 320 320", role: "img" });
     clock.prepend(root);
+    const defs = svg("defs", {}, root);
+    const soulG = svg("radialGradient", { id: "soulG" }, defs);
+    svg("stop", { offset: "0", "stop-color": MOOD.soul, "stop-opacity": 0.95 }, soulG);
+    svg("stop", { offset: "0.55", "stop-color": MOOD.soul, "stop-opacity": 0.35 }, soulG);
+    svg("stop", { offset: "1", "stop-color": MOOD.soul, "stop-opacity": 0 }, soulG);
+    const shineG = svg("radialGradient", { id: "shineG", cx: "0.35", cy: "0.28", r: "0.6" }, defs);
+    svg("stop", { offset: "0", "stop-color": "#ffffff", "stop-opacity": 0.55 }, shineG);
+    svg("stop", { offset: "0.45", "stop-color": "#ffffff", "stop-opacity": 0.08 }, shineG);
+    svg("stop", { offset: "1", "stop-color": "#ffffff", "stop-opacity": 0 }, shineG);
+    const momoG = svg("radialGradient", { id: "momoSoulG" }, defs);
+    svg("stop", { offset: "0", "stop-color": MOOD.soul, "stop-opacity": 1 }, momoG);
+    svg("stop", { offset: "1", "stop-color": MOOD.soul, "stop-opacity": 0 }, momoG);
 
     svg("circle", { cx, cy, r: R, class: "clock-track" }, root);
     const arc = svg("path", { class: "clock-elapsed" }, root);
@@ -115,6 +153,10 @@
     }
     // ---------- 행성: 정20면체를 한 번 나눈 80면, flat shading, 기울어진 축으로 천천히 돈다 ----------
     const globe = svg("g", { class: "globe", transform: `translate(${cx} ${cy})` }, root);
+    svg("circle", { cx: 0, cy: 0, r: 104, class: "globe-atmo" }, globe);
+    const soul = svg("circle", { cx: 0, cy: 0, r: 70, fill: "url(#soulG)", class: "globe-soul" }, globe);
+    const faceLayer = svg("g", { class: "globe-faces" }, globe);
+    svg("circle", { cx: 0, cy: 0, r: 92, fill: "url(#shineG)", class: "globe-shine" }, globe);
     (function () {
       const t = (1 + Math.sqrt(5)) / 2;
       let verts = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]];
@@ -136,16 +178,23 @@
       const bump = faces.map(() => 0.992 + rnd() * 0.016);
 
       const RAD = 92, TILT = 0.42, LIGHT = norm([-0.55, -0.7, 0.45]);
-      const polys = faces.map(() => svg("polygon", { class: "globe-face" }, globe));
+      const polys = faces.map(() => svg("polygon", { class: "globe-face" }, faceLayer));
+      // 면마다 감정색: 원래 법선 방향에 따라 세 가지 틴트(만개·평온·애정)가 대륙처럼 섞인다
+      const TINTS = [hex(BRANCH.calm.tint), hex(BRANCH.bloom.tint), hex(BRANCH.love.tint), hex(BRANCH.tense.tint)];
+      const faceTint = faces.map((f) => {
+        const [a, b2, c2] = f.map((k) => verts[k]);
+        const n = norm([a[0] + b2[0] + c2[0], a[1] + b2[1] + c2[1], a[2] + b2[2] + c2[2]]);
+        const w = Math.sin(n[0] * 2.1 + 0.4) * Math.cos(n[1] * 2.6 - 0.3) + Math.sin(n[2] * 3.1 + n[0]) * 0.6;
+        const k = ((w + 1.6) / 3.2) * (TINTS.length - 1);
+        const i = Math.max(0, Math.min(TINTS.length - 2, Math.floor(k))), t2 = k - i;
+        return TINTS[i].map((v, j) => v + (TINTS[i + 1][j] - v) * t2);
+      });
       const mix = (a, b, k) => Math.round(a + (b - a) * k);
-      // 팔레트는 --planet 토큰에서: 어두운 면은 그 45%, 밝은 면은 흰색 쪽으로 35%
-      const pc = (getComputedStyle(globe).fill || "").match(/\d+/g) || [59, 54, 49];
-      const MIDC = pc.slice(0, 3).map(Number);
-      const DARK = MIDC.map((v) => Math.round(v * 0.45)), LITE = MIDC.map((v) => Math.round(v + (255 - v) * 0.35));
-      function shade(l) {
+      function shade(tint, l) {
         const k = Math.max(0, Math.min(1, l));
-        const [c0, c1, kk] = k < 0.5 ? [DARK, MIDC, k * 2] : [MIDC, LITE, (k - 0.5) * 2];
-        return `rgb(${mix(c0[0], c1[0], kk)},${mix(c0[1], c1[1], kk)},${mix(c0[2], c1[2], kk)})`;
+        // 어두운 면은 틴트의 35%, 밝은 면은 흰색 쪽으로 30%
+        const f = (v) => (k < 0.5 ? v * (0.35 + 0.65 * k * 2) : v + (255 - v) * ((k - 0.5) * 2) * 0.3);
+        return `rgb(${Math.round(f(tint[0]))},${Math.round(f(tint[1]))},${Math.round(f(tint[2]))})`;
       }
       function frame(angle) {
         const ca = Math.cos(angle), sa = Math.sin(angle), ct = Math.cos(TILT), st = Math.sin(TILT);
@@ -164,24 +213,25 @@
           const light = 0.18 + 0.82 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / nl);
           const r = RAD * bump[i];
           polys[i].setAttribute("points", [a, b, c].map((v) => (v[0] * r).toFixed(1) + "," + (v[1] * r).toFixed(1)).join(" "));
-          polys[i].setAttribute("fill", shade(light));
-          polys[i].setAttribute("stroke", shade(light));
+          const col = shade(faceTint[i], light);
+          polys[i].setAttribute("fill", col);
+          polys[i].setAttribute("stroke", col);
           order.push([a[2] + b[2] + c[2], polys[i]]);
         });
-        order.sort((p, q) => p[0] - q[0]).forEach(([, el]) => globe.appendChild(el));
+        order.sort((p, q) => p[0] - q[0]).forEach(([, el]) => faceLayer.appendChild(el));
       }
       frame(0.6);
       if (!reduceMotion) {
         let last = 0;
         (function tick(now) {
-          if (now - last > 40) { last = now; frame(0.6 + now / 60000); } // 한 바퀴에 약 6분
+          if (now - last > 40) { last = now; frame(0.6 + now / 60000); soul.setAttribute("opacity", 0.75 + 0.25 * Math.sin(now / 900)); } // 한 바퀴에 약 6분
           requestAnimationFrame(tick);
         })(0);
       }
     })();
 
     drawRose(root, `translate(${cx} ${cy - R})`);
-    const prince = drawPrince(root, "");
+    const momo = drawMomo(root, "");
 
     const years = clock.querySelector(".clock-years");
     const live = clock.querySelector(".clock-live");
@@ -200,7 +250,7 @@
       const [ax, ay] = polar(cx, cy, R, 0);
       const [bx, by] = polar(cx, cy, R, f);
       arc.setAttribute("d", `M${ax} ${ay} A${R} ${R} 0 ${f > 0.5 ? 1 : 0} 1 ${bx} ${by}`);
-      prince.setAttribute("transform", `rotate(${f * 360} ${cx} ${cy}) translate(${cx} ${cy - R})`);
+      momo.setAttribute("transform", `rotate(${f * 360} ${cx} ${cy}) translate(${cx} ${cy - R})`);
       years.textContent = st.yearsLeft;
       live.textContent = `${fmt(st.daysLeft)}일 ${pad(st.h)}:${pad(st.m)}:${pad(st.s)}`;
       root.setAttribute("aria-label", `${SPAN}년 중 ${st.yearsElapsed.toFixed(1)}년 지남, ${st.yearsLeft}년 남음`);
