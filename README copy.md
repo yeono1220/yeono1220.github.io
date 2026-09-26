@@ -9,7 +9,7 @@
 ├── index.html        # 메인(포트폴리오) 페이지
 ├── blog.html          # 블로그 목록 페이지
 ├── style.css          # 전체 공통 스타일
-├── script.js          # 히어로 별빛 애니메이션
+├── script.js          # 60년짜리 인생 시계 + 행성 그림
 └── posts/
     ├── post-1.html
     ├── post-2.html
@@ -21,6 +21,7 @@
 - 이름, 소개, 프로젝트: `index.html`의 `#about`, `#projects` 섹션
 - 새 글 추가: `posts/` 폴더에 기존 파일을 복사해서 새 파일 만들고, `index.html`과 `blog.html`의 목록에 링크 추가
 - 색상/폰트: `style.css` 맨 위 `:root` 변수만 바꾸면 전체 톤이 바뀝니다
+- 인생 시계: `index.html`의 `data-birth`(생일)와 `data-span`(수명, 기본 60)
 
 ## GitHub Pages로 배포하기
 

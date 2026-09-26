@@ -4,17 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>고연오 · 인간</title>
-<meta name="description" content="고연오의 개인 포트폴리오와 블로그. 내면과 우주, 그 사이 어딘가에서 만든 것들을 기록합니다." />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✦</text></svg>" />
+<meta name="description" content="고연오의 개인 포트폴리오와 블로그. 60년짜리 시계와 작은 행성 하나, 그 위에서 만든 것들을 기록합니다." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2244%22 fill=%22%23e3866a%22/></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
-<div class="nebula" aria-hidden="true"></div>
 
 <header class="site-nav">
   <div class="wrap">
@@ -29,13 +26,21 @@
 
 <main>
   <section class="hero">
-    <canvas id="stars" aria-hidden="true"></canvas>
     <div class="wrap">
-      <p class="hero-kicker">안녕하세요, 저는</p>
-      <h1>고연오<br /><span class="hero-role">인간</span>입니다</h1>
-      <p class="lede">내면을 들여다보고, 가끔 그걸 코드로 옮깁니다. 감정과 우주 사이 어딘가에서 만든 것들을 이곳에 남겨둡니다.</p>
+      <!-- 생일(data-birth)을 실제 날짜로 바꾸세요. 삶을 60년으로 가정합니다. -->
+      <figure class="life-clock" id="life-clock" data-birth="2000-01-01" data-span="60">
+        <figcaption>
+          <span class="clock-years">–</span>
+          <span class="clock-unit label">년 남음</span>
+          <span class="clock-live"></span>
+        </figcaption>
+      </figure>
+      <h1>어차피 지나간다.<br />그러니까, 오늘.</h1>
+      <p class="lede">고연오, 인간입니다. 내면을 들여다보고, 가끔 그걸 코드로 옮깁니다.</p>
     </div>
   </section>
+
+  <svg class="planet" aria-hidden="true"></svg>
 
   <section id="about">
     <div class="wrap">
@@ -45,23 +50,24 @@
         감정, 생각, 그리고 그 사이의 여백 같은 것들에 관심이 많고,
         그 관심이 자연스럽게 만들고 기록하는 일로 이어졌습니다.
       </p>
-      <blockquote class="pullquote">
-        코드를 쓰는 것도 결국 저를 이해하는 방법 중 하나라고 생각해요.
-      </blockquote>
+      <p class="quote">코드를 쓰는 것도 결국 저를 이해하는 방법 중 하나라고 생각해요.</p>
+      <div class="life-grid-row">
+        <div class="life-grid" id="life-grid" role="img"></div>
+        <p class="label"><span id="life-grid-label">YEAR – / 60</span><br />이번 해는 하나뿐.</p>
+      </div>
     </div>
   </section>
 
   <section id="projects">
     <div class="wrap">
       <h2>만든 것</h2>
-      <a class="project-card" href="https://innerverse-explorer.vercel.app/" target="_blank" rel="noopener">
-        <div class="project-thumb" aria-hidden="true"></div>
-        <div class="project-body">
-          <p class="eyebrow">개인 프로젝트</p>
+      <div class="post-list">
+        <a class="post-row" href="https://innerverse-explorer.vercel.app/" target="_blank" rel="noopener">
+          <span class="label">개인 프로젝트</span>
           <h3>Innerverse</h3>
-          <p>당신의 내면을 탐험하세요. 매일의 감정을 기록하면 AI가 그 흐름을 읽어주는 감정 일기장입니다. 우주를 유영하듯 내면을 들여다보는 경험을 만들고 싶었습니다.</p>
-        </div>
-      </a>
+          <p>매일의 감정을 기록하면 AI가 그 흐름을 읽어주는 감정 일기장. 우주를 유영하듯 내면을 들여다보는 경험을 만들고 싶었습니다.</p>
+        </a>
+      </div>
     </div>
   </section>
 
