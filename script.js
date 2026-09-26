@@ -133,12 +133,15 @@
       // 면마다 아주 약간 다른 높이 — 지형 같은 울퉁불퉁함
       let seed = 612;
       const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-      const bump = faces.map(() => 0.985 + rnd() * 0.03);
+      const bump = faces.map(() => 0.992 + rnd() * 0.016);
 
       const RAD = 92, TILT = 0.42, LIGHT = norm([-0.55, -0.7, 0.45]);
       const polys = faces.map(() => svg("polygon", { class: "globe-face" }, globe));
       const mix = (a, b, k) => Math.round(a + (b - a) * k);
-      const DARK = [22, 20, 18], MIDC = [59, 54, 49], LITE = [118, 108, 96];
+      // 팔레트는 --planet 토큰에서: 어두운 면은 그 45%, 밝은 면은 흰색 쪽으로 35%
+      const pc = (getComputedStyle(globe).fill || "").match(/\d+/g) || [59, 54, 49];
+      const MIDC = pc.slice(0, 3).map(Number);
+      const DARK = MIDC.map((v) => Math.round(v * 0.45)), LITE = MIDC.map((v) => Math.round(v + (255 - v) * 0.35));
       function shade(l) {
         const k = Math.max(0, Math.min(1, l));
         const [c0, c1, kk] = k < 0.5 ? [DARK, MIDC, k * 2] : [MIDC, LITE, (k - 0.5) * 2];
