@@ -11,7 +11,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<!-- 생일과 수명(년)은 여기서 바꿉니다. 시계, 그리드, 글의 '몇 번째 해'가 모두 이 값을 씁니다. -->
+<body data-birth="2004-12-20" data-span="60">
+
+<canvas class="sky" aria-hidden="true"></canvas>
 
 <header class="site-nav">
   <div class="wrap">
@@ -26,25 +29,21 @@
 
 <main>
   <section class="hero">
-    <div class="wrap">
-      <!-- 생일(data-birth)을 실제 날짜로 바꾸세요. 삶을 60년으로 가정합니다. -->
-      <figure class="life-clock" id="life-clock" data-birth="2000-01-01" data-span="60">
-        <figcaption>
-          <span class="clock-years">–</span>
-          <span class="clock-unit label">년 남음</span>
-          <span class="clock-live"></span>
-        </figcaption>
-      </figure>
-      <h1>어차피 지나간다.<br />그러니까, 오늘.</h1>
-      <p class="lede">고연오, 인간입니다. 내면을 들여다보고, 가끔 그걸 코드로 옮깁니다.</p>
-    </div>
+    <span class="life-range label" id="life-range"></span>
+    <figure class="life-clock" id="life-clock">
+      <div class="clock-center">
+        <span class="clock-years">–</span>
+        <span class="clock-unit label">년 남음</span>
+      </div>
+      <figcaption class="clock-live"></figcaption>
+    </figure>
+    <h1>어차피 지나간다.<br />그러니까, 오늘.</h1>
+    <p class="lede">고연오, 인간입니다. 내면을 들여다보고, 가끔 그걸 코드로 옮깁니다.</p>
   </section>
-
-  <svg class="planet" aria-hidden="true"></svg>
 
   <section id="about">
     <div class="wrap">
-      <h2>소개</h2>
+      <h2><span class="idx">01</span>소개</h2>
       <p class="lead-text">
         저는 스스로를 개발자보다 '인간'이라고 소개하는 걸 더 좋아합니다.
         감정, 생각, 그리고 그 사이의 여백 같은 것들에 관심이 많고,
@@ -53,14 +52,14 @@
       <p class="quote">코드를 쓰는 것도 결국 저를 이해하는 방법 중 하나라고 생각해요.</p>
       <div class="life-grid-row">
         <div class="life-grid" id="life-grid" role="img"></div>
-        <p class="label"><span id="life-grid-label">YEAR – / 60</span><br />이번 해는 하나뿐.</p>
+        <p class="label"><span id="life-grid-label">YEAR – / 60</span><br />이번 해는 하나뿐.<span class="stat" id="life-grid-stat"></span></p>
       </div>
     </div>
   </section>
 
   <section id="projects">
     <div class="wrap">
-      <h2>만든 것</h2>
+      <h2><span class="idx">02</span>만든 것</h2>
       <div class="post-list">
         <a class="post-row" href="https://innerverse-explorer.vercel.app/" target="_blank" rel="noopener">
           <span class="label">개인 프로젝트</span>
@@ -73,7 +72,7 @@
 
   <section id="blog-preview">
     <div class="wrap">
-      <h2>최근 글</h2>
+      <h2><span class="idx">03</span>최근 글</h2>
       <div class="post-list">
         <a class="post-row" href="posts/post-1.html">
           <time>2026.09.10</time>
@@ -96,14 +95,10 @@
   </section>
 </main>
 
-<footer>
+<footer class="ground">
+  <svg class="horizon" aria-hidden="true"></svg>
   <div class="wrap">
-    <span>© 2026 고연오</span>
-    <span>
-      <a href="https://github.com/yeono1220" target="_blank" rel="noopener">GitHub</a>
-      &nbsp;·&nbsp;
-      <a href="https://innerverse-explorer.vercel.app/" target="_blank" rel="noopener">Innerverse</a>
-    </span>
+    <span>© 2026 고연오</span><span class="dot">·</span><a href="https://github.com/yeono1220" target="_blank" rel="noopener">GitHub</a><span class="dot">·</span><a href="https://innerverse-explorer.vercel.app/" target="_blank" rel="noopener">Innerverse</a>
   </div>
 </footer>
 
