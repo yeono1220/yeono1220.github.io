@@ -11,7 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body data-birth="2004-12-20" data-span="60">
+
+<canvas class="sky" aria-hidden="true"></canvas>
 
 <header class="site-nav">
   <div class="wrap">
@@ -51,16 +53,13 @@
   </section>
 </main>
 
-<footer>
+<footer class="ground">
+  <svg class="horizon" aria-hidden="true"></svg>
   <div class="wrap">
-    <span>© 2026 고연오</span>
-    <span>
-      <a href="https://github.com/yeono1220" target="_blank" rel="noopener">GitHub</a>
-      &nbsp;·&nbsp;
-      <a href="https://innerverse-explorer.vercel.app/" target="_blank" rel="noopener">Innerverse</a>
-    </span>
+    <span>© 2026 고연오</span><span class="dot">·</span><a href="https://github.com/yeono1220" target="_blank" rel="noopener">GitHub</a><span class="dot">·</span><a href="https://innerverse-explorer.vercel.app/" target="_blank" rel="noopener">Innerverse</a>
   </div>
 </footer>
 
+<script src="script.js"></script>
 </body>
 </html>
