@@ -73,23 +73,7 @@
   <section id="blog-preview">
     <div class="wrap">
       <h2><span class="idx">03</span>최근 글</h2>
-      <div class="post-list">
-        <a class="post-row" href="posts/post-1.html">
-          <time>2026.09.10</time>
-          <h3>우주를 닮은 감정에 대하여</h3>
-          <p>왜 감정은 늘 확장하고 수축하는 우주처럼 느껴질까, 라는 생각에서 시작한 글입니다.</p>
-        </a>
-        <a class="post-row" href="posts/post-2.html">
-          <time>2026.08.22</time>
-          <h3>혼자 만든 첫 서비스, Innerverse</h3>
-          <p>Innerverse를 기획하고 만들면서 겪은 시행착오와 배운 점을 정리했습니다.</p>
-        </a>
-        <a class="post-row" href="posts/post-3.html">
-          <time>2026.07.30</time>
-          <h3>인간으로 산다는 것</h3>
-          <p>직함이나 역할보다 '인간'이라는 말이 저에게 더 정직하게 느껴지는 이유.</p>
-        </a>
-      </div>
+      <div class="post-list" id="post-list"></div>
       <a class="more-link" href="blog.html">전체 글 보기</a>
     </div>
   </section>
@@ -103,5 +87,7 @@
 </footer>
 
 <script src="script.js"></script>
+<script src="posts.js"></script>
+<script>Posts.renderList(document.getElementById("post-list"), 3);</script>
 </body>
 </html>

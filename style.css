@@ -461,3 +461,43 @@ footer.ground .dot {
     height: 200px;
   }
 }
+
+/* ---------- post body (markdown) ---------- */
+
+.post-body h2, .post-body h3 { font-family: var(--font-serif); font-weight: 700; margin: var(--space-6) 0 var(--space-3); }
+.post-body h2 { font-size: 24px; line-height: 36px; }
+.post-body h3 { font-size: 20px; line-height: 32px; }
+.post-body blockquote { font-family: var(--font-serif); font-size: 20px; line-height: 34px; margin: var(--space-5) 0; }
+.post-body ul { padding-left: 1.2em; margin: var(--space-4) 0; }
+.post-body hr { border: 0; border-top: 1px solid var(--hairline); margin: var(--space-6) 0; }
+.post-body code { font-family: var(--font-mono); font-size: 0.9em; background: var(--void-raised); padding: 1px 5px; border-radius: 2px; }
+.post-body a { text-decoration: underline; text-decoration-color: var(--hairline); text-underline-offset: 5px; }
+.post-body a:hover { color: var(--rose); text-decoration-color: var(--rose); }
+.post-edit { margin-top: var(--space-6); }
+.post-edit a { text-decoration: none; }
+.post-edit a:hover { color: var(--rose); }
+
+/* ---------- 쓰기 ---------- */
+
+.editor .field { margin-top: var(--space-4); }
+.editor .field.row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.editor label { display: block; margin-bottom: var(--space-2); }
+.editor input, .editor select, .editor textarea {
+  width: 100%; margin: 0; padding: 10px 12px;
+  background: var(--void-raised); color: var(--ink); border: 1px solid var(--hairline); border-radius: 2px;
+  font: inherit; line-height: 26px;
+}
+.editor textarea { font-family: var(--font-serif); font-size: 18px; line-height: 32px; resize: vertical; }
+.editor input:focus, .editor select:focus, .editor textarea:focus { outline: 2px solid var(--rose); outline-offset: 2px; }
+.editor .hint { margin: var(--space-2) 0 0; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
+.editor .hint a { text-decoration: underline; text-decoration-color: var(--hairline); text-underline-offset: 4px; }
+.editor .hint-inline { font-weight: 400; letter-spacing: 0; text-transform: none; margin-left: var(--space-2); color: var(--ink-faint); }
+.editor .actions { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-5); flex-wrap: wrap; }
+.btn { font: inherit; font-size: 15px; padding: 8px 18px; border-radius: 2px; cursor: pointer; background: var(--ink); color: var(--void); border: 1px solid var(--ink); }
+.btn:hover { background: var(--rose); border-color: var(--rose); }
+.btn.quiet { background: transparent; color: var(--ink-muted); border-color: var(--hairline); }
+.btn.quiet:hover { color: var(--ink); border-color: var(--ink-muted); background: transparent; }
+.btn.danger:hover { color: var(--rose); border-color: var(--rose); }
+.btn:disabled { opacity: .5; cursor: default; }
+.preview { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--hairline); }
+@media (max-width: 600px) { .editor .field.row { grid-template-columns: 1fr; } }

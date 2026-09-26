@@ -10,16 +10,18 @@
 ├── blog.html          # 블로그 목록 페이지
 ├── style.css          # 전체 공통 스타일
 ├── script.js          # 60년짜리 인생 시계 + 행성 그림
+├── posts.js           # 글 목록/본문 렌더링 (마크다운)
+├── post.html          # 글 한 편 (post.html?p=슬러그)
+├── write.html         # 사이트 안에서 글 쓰기/수정/삭제 (GitHub 토큰 필요)
 └── posts/
-    ├── post-1.html
-    ├── post-2.html
-    └── post-3.html    # 예시 글 (내용은 자유롭게 수정/삭제하세요)
+    ├── index.json     # 글 목록 (제목, 날짜, 요약)
+    └── <슬러그>.md     # 글 본문 (마크다운)
 ```
 
 ## 내용 수정하기
 
 - 이름, 소개, 프로젝트: `index.html`의 `#about`, `#projects` 섹션
-- 새 글 추가: `posts/` 폴더에 기존 파일을 복사해서 새 파일 만들고, `index.html`과 `blog.html`의 목록에 링크 추가
+- 글 쓰기/수정/삭제: 사이트의 `write.html`에서. GitHub fine-grained 토큰(이 저장소 Contents 읽기/쓰기)을 한 번 넣으면 브라우저에서 바로 저장된다. 손으로 하려면 `posts/<슬러그>.md`와 `posts/index.json`을 고친다
 - 색상/폰트: `style.css` 맨 위 `:root` 변수만 바꾸면 전체 톤이 바뀝니다
 - 인생 시계: 각 HTML의 `<body data-birth="...">`(생일)와 `data-span`(수명, 기본 60)
 
