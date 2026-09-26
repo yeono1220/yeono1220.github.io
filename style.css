@@ -158,6 +158,7 @@ time,
 .clock-tick { stroke: var(--ink-faint); stroke-width: 1px; }
 .clock-tick.is-decade { stroke: var(--ink-muted); stroke-width: 1.5px; }
 .clock-num { fill: var(--ink-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; }
+.globe-face { stroke-width: 0.5px; stroke-linejoin: round; }
 
 .clock-center {
   position: absolute;
@@ -183,6 +184,7 @@ time,
 
 .clock-unit {
   margin-top: var(--space-1);
+  color: var(--ink);
 }
 
 .clock-live {
@@ -197,12 +199,14 @@ time,
 
 /* 처음 한 번: 호가 그려진 뒤 왕자와 숫자가 나타난다 */
 .life-clock .figure,
+.life-clock .globe,
 .life-clock .clock-center {
   opacity: 0;
   transition: opacity 0.9s ease 1.1s;
 }
 
 .life-clock.is-ready .figure,
+.life-clock.is-ready .globe,
 .life-clock.is-ready .clock-center {
   opacity: 1;
 }
