@@ -176,14 +176,18 @@
   }
 
   // ---------- 글 날짜 옆에: 인생 몇 번째 해에 쓴 글인지 ----------
-  document.querySelectorAll(".post-header time[datetime]").forEach((t) => {
-    const at = new Date(t.getAttribute("datetime") + "T00:00:00").getTime();
-    const year = Math.floor(lifeStats(at).yearsElapsed) + 1;
-    const s = document.createElement("span");
-    s.className = "life-year";
-    s.textContent = ` · ${year}번째 해`;
-    t.after(s);
-  });
+  window.ivLabelDates = function (scope) {
+    (scope || document).querySelectorAll(".post-header time[datetime]").forEach((t) => {
+      if (t.nextElementSibling && t.nextElementSibling.classList.contains("life-year")) return;
+      const at = new Date(t.getAttribute("datetime") + "T00:00:00").getTime();
+      const year = Math.floor(lifeStats(at).yearsElapsed) + 1;
+      const s = document.createElement("span");
+      s.className = "life-year";
+      s.textContent = ` · ${year}번째 해`;
+      t.after(s);
+    });
+  };
+  window.ivLabelDates();
 
   // ---------- 땅: 페이지 끝의 행성 지평선, 장미 하나 ----------
   document.querySelectorAll("svg.horizon").forEach((root) => {

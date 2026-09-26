@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>블로그 · 고연오</title>
-<meta name="description" content="고연오의 블로그. 내면, 우주, 개발에 관한 기록." />
+<title>글 · 고연오</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2244%22 fill=%22%23e3866a%22/></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,10 +28,8 @@
 <main>
   <section>
     <div class="wrap">
-      <h1 class="page-title">기록</h1>
-      <p class="lead-text" style="margin-bottom: var(--space-6);">내면과 우주, 그리고 그 사이에서 만든 것들에 대한 글입니다.</p>
-
-       <div class="post-list" id="post-list"></div>
+      <a class="back-link" href="blog.html">목록으로</a>
+      <article id="post"></article>
     </div>
   </section>
 </main>
@@ -46,6 +43,6 @@
 
 <script src="script.js"></script>
 <script src="posts.js"></script>
-<script>Posts.renderList(document.getElementById("post-list"));</script>
+<script>Posts.renderPost(document.getElementById("post"));</script>
 </body>
 </html>

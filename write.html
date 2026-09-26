@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>쓰기 · 고연오</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2244%22 fill=%22%23e3866a%22/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body data-birth="2004-12-20" data-span="60">
+
+<canvas class="sky" aria-hidden="true"></canvas>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="index.html">고연오</a>
+    <nav class="links">
+      <a href="index.html">홈</a>
+      <a href="blog.html">블로그</a>
+      <a href="write.html" aria-current="page">쓰기</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="wrap editor">
+      <h1 class="page-title">쓰기</h1>
+
+      <div class="field" id="token-field">
+        <label class="label" for="token">GITHUB TOKEN</label>
+        <input id="token" type="password" autocomplete="off" placeholder="github_pat_…" />
+        <p class="hint">이 저장소에 Contents 읽기/쓰기 권한이 있는 <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained 토큰</a>. 이 브라우저에만 저장된다.</p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="pick">글</label>
+        <select id="pick"><option value="">— 새 글 —</option></select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="title">제목</label>
+        <input id="title" type="text" />
+      </div>
+
+      <div class="field row">
+        <div>
+          <label class="label" for="date">날짜</label>
+          <input id="date" type="date" />
+        </div>
+        <div>
+          <label class="label" for="slug">주소 (SLUG)</label>
+          <input id="slug" type="text" placeholder="비우면 날짜로" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="excerpt">한 줄 요약</label>
+        <input id="excerpt" type="text" />
+      </div>
+
+      <div class="field">
+        <label class="label" for="body">본문 <span class="hint-inline">빈 줄로 문단, ## 제목, &gt; 인용, - 목록, **굵게**, [링크](url)</span></label>
+        <textarea id="body" rows="18"></textarea>
+      </div>
+
+      <div class="actions">
+        <button id="save" class="btn">저장</button>
+        <button id="preview" class="btn quiet">미리보기</button>
+        <button id="delete" class="btn quiet danger" hidden>삭제</button>
+        <span id="status" class="label"></span>
+      </div>
+
+      <article id="preview-box" class="preview" hidden></article>
+    </div>
+  </section>
+</main>
+
+<footer class="ground">
+  <svg class="horizon" aria-hidden="true"></svg>
+  <div class="wrap"><span>© 2026 고연오</span></div>
+</footer>
+
+<script src="script.js"></script>
+<script src="posts.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const { owner, repo, branch } = Posts.REPO;
+  const API = `https://api.github.com/repos/${owner}/${repo}/contents/`;
+  const KEY = "iv.token";
+  let posts = [];
+  let current = null; // 편집 중인 글
+
+  // ---- 토큰: 이 브라우저의 localStorage 에만 ----
+  try { $("token").value = localStorage.getItem(KEY) || ""; } catch (e) {}
+  $("token").addEventListener("change", () => { try { localStorage.setItem(KEY, $("token").value.trim()); } catch (e) {} });
+
+  const b64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+  const unb64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), (c) => c.charCodeAt(0)));
+
+  async function gh(path, opts) {
+    const token = $("token").value.trim();
+    if (!token) throw new Error("토큰이 없다.");
+    const r = await fetch(API + path + (opts && opts.method ? "" : `?ref=${branch}&t=${Date.now()}`), {
+      ...opts,
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", ...(opts && opts.headers) },
+    });
+    if (r.status === 404 && !(opts && opts.method)) return null;
+    if (!r.ok) throw new Error(`GitHub ${r.status}: ${(await r.json()).message || ""}`);
+    return r.json();
+  }
+  const put = (path, content, sha, message) =>
+    gh(path, { method: "PUT", body: JSON.stringify({ message, content: b64(content), branch, ...(sha ? { sha } : {}) }) });
+
+  function status(msg, ok) { $("status").textContent = msg; $("status").style.color = ok === false ? "var(--rose)" : ""; }
+
+  // ---- 목록 ----
+  async function load() {
+    posts = await Posts.list();
+    $("pick").innerHTML = '<option value="">— 새 글 —</option>' + posts.map((p) => `<option value="${p.slug}">${Posts.fmtDate(p.date)} · ${Posts.esc(p.title)}</option>`).join("");
+    const want = new URLSearchParams(location.search).get("p");
+    if (want) { $("pick").value = want; await open(want); } else fresh();
+  }
+
+  function fresh() {
+    current = null;
+    $("title").value = ""; $("excerpt").value = ""; $("slug").value = ""; $("body").value = "";
+    $("date").value = new Date().toISOString().slice(0, 10);
+    $("delete").hidden = true;
+    $("preview-box").hidden = true;
+    status("");
+  }
+
+  async function open(slug) {
+    const p = posts.find((x) => x.slug === slug);
+    if (!p) return fresh();
+    current = p;
+    $("title").value = p.title; $("excerpt").value = p.excerpt || ""; $("slug").value = p.slug; $("date").value = p.date;
+    const r = await fetch(`posts/${slug}.md?t=${Date.now()}`, { cache: "no-cache" });
+    $("body").value = r.ok ? await r.text() : "";
+    $("delete").hidden = false;
+    status("");
+  }
+
+  $("pick").addEventListener("change", (e) => (e.target.value ? open(e.target.value) : fresh()));
+
+  // ---- 저장: posts/<slug>.md 와 posts/index.json 두 파일 ----
+  $("save").addEventListener("click", async () => {
+    const title = $("title").value.trim(), date = $("date").value, body = $("body").value.replace(/\s+$/, "") + "\n";
+    let slug = ($("slug").value.trim() || date).toLowerCase().replace(/[^a-z0-9가-힣-]+/g, "-").replace(/^-|-$/g, "");
+    if (!title || !date || !body.trim()) return status("제목, 날짜, 본문은 있어야 한다.", false);
+    if (!current && posts.some((p) => p.slug === slug)) slug += "-2";
+    try {
+      status("저장 중…");
+      $("save").disabled = true;
+      const mdFile = await gh(`posts/${slug}.md`);
+      await put(`posts/${slug}.md`, body, mdFile && mdFile.sha, `${current ? "수정" : "새 글"}: ${title}`);
+      const idx = await gh("posts/index.json");
+      const list = idx ? JSON.parse(unb64(idx.content)) : [];
+      const entry = { slug, title, date, excerpt: $("excerpt").value.trim() };
+      const i = list.findIndex((p) => p.slug === (current ? current.slug : slug));
+      if (i >= 0) list[i] = entry; else list.push(entry);
+      list.sort((a, b) => (a.date < b.date ? 1 : -1));
+      if (current && current.slug !== slug) {
+        const old = await gh(`posts/${current.slug}.md`);
+        if (old) await gh(`posts/${current.slug}.md`, { method: "DELETE", body: JSON.stringify({ message: `이동: ${current.slug} → ${slug}`, sha: old.sha, branch }) });
+      }
+      await put("posts/index.json", JSON.stringify(list, null, 2) + "\n", idx && idx.sha, `목록: ${title}`);
+      status("저장했다. 1~2분 뒤 사이트에 보인다.");
+      current = entry;
+      $("slug").value = slug; $("delete").hidden = false;
+      history.replaceState(null, "", `write.html?p=${encodeURIComponent(slug)}`);
+    } catch (e) {
+      status(e.message, false);
+    } finally {
+      $("save").disabled = false;
+    }
+  });
+
+  // ---- 삭제 ----
+  $("delete").addEventListener("click", async () => {
+    if (!current || !confirm(`"${current.title}" 을 지울까?`)) return;
+    try {
+      status("지우는 중…");
+      const md = await gh(`posts/${current.slug}.md`);
+      if (md) await gh(`posts/${current.slug}.md`, { method: "DELETE", body: JSON.stringify({ message: `삭제: ${current.title}`, sha: md.sha, branch }) });
+      const idx = await gh("posts/index.json");
+      const list = JSON.parse(unb64(idx.content)).filter((p) => p.slug !== current.slug);
+      await put("posts/index.json", JSON.stringify(list, null, 2) + "\n", idx.sha, `목록에서 삭제: ${current.title}`);
+      status("지웠다.");
+      await load(); fresh(); $("pick").value = "";
+    } catch (e) { status(e.message, false); }
+  });
+
+  // ---- 미리보기 ----
+  $("preview").addEventListener("click", () => {
+    const box = $("preview-box");
+    box.hidden = !box.hidden;
+    if (!box.hidden) box.innerHTML = `<header class="post-header"><time>${Posts.fmtDate($("date").value || "")}</time><h1>${Posts.esc($("title").value)}</h1></header><div class="post-body">${Posts.markdown($("body").value)}</div>`;
+  });
+
+  load().catch((e) => status(e.message, false));
+})();
+</script>
+</body>
+</html>
