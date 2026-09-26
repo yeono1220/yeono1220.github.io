@@ -158,7 +158,8 @@ time,
 .clock-tick { stroke: var(--ink-faint); stroke-width: 1px; }
 .clock-tick.is-decade { stroke: var(--ink-muted); stroke-width: 1.5px; }
 .clock-num { fill: var(--ink-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; }
-.globe-face { stroke-width: 0.5px; stroke-linejoin: round; }
+.globe { fill: var(--planet); }
+.globe-face { stroke-width: 1px; stroke-linejoin: round; }
 
 .clock-center {
   position: absolute;
