@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>상권 스코프</title>
+<!--
+  실행 방법
+  - 이 파일이 있는 폴더에서  python3 -m http.server 8000  실행 후  http://localhost:8000/파일이름.html  으로 여세요.
+  - 카카오맵 JS 키와 소상공인365 인증키는 모두 http://localhost:8000 에 등록되어 있습니다.
+    다른 주소(file://, 다른 포트)로 열면 지도와 365 화면이 비어 보일 수 있습니다.
+
+  화면 구성 (한 번 클릭 = 바로 정보)
+  - 왼쪽 메뉴: [지도·점포 조회] + 소상공인365 서비스 11개를 한 줄씩 나열
+  - 지도·점포 조회: 동 칩을 누르거나 지도의 상권 경계를 누르면 오른쪽에 점포 통계가 바로 뜸 (모달 없음)
+  - 소상공인365: 메뉴를 누르면 해당 화면이 본문 전체에 바로 뜸 (탭 속 탭 없음)
+-->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=8103aa2e7b41f7552a7e4351877bac03"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --bg:#eef1ee; --surface:#ffffff; --surface-2:#f5f7f5; --line:#dbe1dc;
+    --ink:#18221d; --ink-2:#48554e; --muted:#7d8a83;
+    --accent:#136f5b; --accent-soft:#e2f0eb; --accent-ink:#0d5a49;
+    --hot:#d9482f; --warn:#a86a00; --err:#b83227;
+    --rail:232px; --panel:380px;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#111613; --surface:#181f1b; --surface-2:#1f2823; --line:#2c3831;
+      --ink:#eaf0ec; --ink-2:#b5c2ba; --muted:#7f8e86;
+      --accent:#4cc3a3; --accent-soft:#1a3029; --accent-ink:#8fe0c8;
+      --hot:#ff7a5f; --warn:#e0a53c; --err:#ff7b6e;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111613; --surface:#181f1b; --surface-2:#1f2823; --line:#2c3831;
+    --ink:#eaf0ec; --ink-2:#b5c2ba; --muted:#7f8e86;
+    --accent:#4cc3a3; --accent-soft:#1a3029; --accent-ink:#8fe0c8;
+    --hot:#ff7a5f; --warn:#e0a53c; --err:#ff7b6e;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%; margin:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Noto Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  button,input{font:inherit; color:inherit;}
+  button{cursor:pointer;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .tnum{font-variant-numeric:tabular-nums;}
+
+  .app{display:grid; grid-template-columns:var(--rail) 1fr; height:100%; min-height:0;}
+
+  /* ---------- 왼쪽 메뉴 ---------- */
+  .rail{background:var(--surface); border-right:1px solid var(--line); overflow-y:auto; padding:18px 12px 24px; display:flex; flex-direction:column; gap:18px;}
+  .logo{padding:0 8px; font-weight:800; font-size:18px; letter-spacing:-.02em;}
+  .logo span{display:block; font-size:12px; font-weight:500; color:var(--muted); letter-spacing:0;}
+  .navgroup h3{margin:0 0 4px; padding:0 8px; font-size:12px; font-weight:600; color:var(--muted);}
+  .navgroup ul{list-style:none; margin:0; padding:0;}
+  .navbtn{
+    width:100%; text-align:left; border:0; background:transparent; border-radius:8px;
+    padding:8px 10px; font-size:14px; font-weight:500; color:var(--ink-2); display:flex; align-items:center; gap:8px;
+  }
+  .navbtn:hover{background:var(--surface-2); color:var(--ink);}
+  .navbtn[aria-current="page"]{background:var(--accent-soft); color:var(--accent-ink); font-weight:700;}
+  .navbtn .tag{margin-left:auto; font-size:11px; font-weight:700; color:var(--accent); }
+  .railnote{margin-top:auto; padding:10px; border-radius:8px; background:var(--surface-2); font-size:12px; color:var(--ink-2); line-height:1.55;}
+  .railnote[data-tone="warn"]{color:var(--warn);}
+
+  .main{min-width:0; min-height:0; position:relative;}
+  .view{position:absolute; inset:0; display:none;}
+  .view.on{display:flex;}
+
+  /* ---------- 지도·점포 조회 ---------- */
+  .storeview{flex-direction:row;}
+  .mapcol{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .maptools{background:var(--surface); border-bottom:1px solid var(--line); padding:10px 14px; display:flex; flex-direction:column; gap:8px;}
+  .toolrow{display:flex; align-items:center; gap:10px;}
+  .toolrow .lbl{font-size:12px; font-weight:600; color:var(--muted); flex:0 0 auto;}
+  .chips{display:flex; gap:6px; overflow-x:auto; scrollbar-width:thin; padding-bottom:2px;}
+  .chip{
+    flex:0 0 auto; border:1px solid var(--line); background:var(--surface); border-radius:999px;
+    padding:5px 12px; font-size:13px; font-weight:500; color:var(--ink-2); white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--accent);}
+  .chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;}
+  .toggle{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2); cursor:pointer; flex:0 0 auto;}
+  .toggle input{accent-color:var(--accent); width:15px; height:15px; margin:0;}
+  .zonestatus{font-size:12px; color:var(--muted); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .zonestatus[data-tone="err"]{color:var(--err);}
+
+  .mapbox{flex:1; position:relative; min-height:0; background:var(--surface-2);}
+  #kakaoMap{position:absolute; inset:0;}
+  .mapfallback{position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:32px; text-align:center; color:var(--ink-2); font-size:13px;}
+  .mapfallback b{color:var(--ink); font-size:15px;}
+  .mapfallback code{background:var(--surface); border:1px solid var(--line); padding:1px 6px; border-radius:4px;}
+  .maphint{position:absolute; left:12px; bottom:12px; z-index:3; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:12px; color:var(--ink-2); box-shadow:0 4px 14px -6px rgba(0,0,0,.25);}
+  .zoomctl{position:absolute; right:12px; bottom:12px; z-index:3; display:flex; flex-direction:column; gap:4px;}
+  .zoomctl button{width:34px; height:34px; border-radius:8px; border:1px solid var(--line); background:var(--surface); font-size:17px; font-weight:700;}
+
+  .sdot{width:9px; height:9px; border-radius:50%; border:1.5px solid #fff; box-shadow:0 0 0 .5px rgba(0,0,0,.35); transform:translate(-50%,-50%); cursor:pointer;}
+  .sdot.hl{width:15px; height:15px; box-shadow:0 0 0 3px rgba(0,0,0,.25);}
+  .ztip,.stip{font-size:12px; font-weight:600; background:var(--surface); color:var(--ink); padding:4px 9px; border-radius:6px; border:1px solid var(--line); box-shadow:0 4px 14px -6px rgba(0,0,0,.3); white-space:nowrap; pointer-events:none;}
+  .stip small{display:block; font-weight:500; color:var(--muted);}
+
+  /* ---------- 결과 패널 ---------- */
+  .panel{width:var(--panel); flex:0 0 auto; background:var(--surface); border-left:1px solid var(--line); overflow-y:auto; display:flex; flex-direction:column;}
+  .phead{padding:18px 18px 14px; border-bottom:1px solid var(--line);}
+  .phead .kind{font-size:12px; font-weight:600; color:var(--accent);}
+  .phead h2{margin:2px 0 0; font-size:22px; font-weight:800; letter-spacing:-.02em;}
+  .phead .total{margin-top:6px; font-size:14px; color:var(--ink-2);}
+  .phead .total b{font-size:20px; color:var(--ink); font-weight:800;}
+  .phead .src{margin-top:4px; font-size:11.5px; color:var(--muted);}
+  .psec{padding:14px 18px; border-bottom:1px solid var(--line);}
+  .psec h4{margin:0 0 8px; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:space-between;}
+  .psec h4 button{border:0; background:none; color:var(--accent); font-size:12px; font-weight:600; padding:0;}
+  .stack{display:flex; height:10px; border-radius:5px; overflow:hidden; margin-bottom:10px; background:var(--surface-2);}
+  .stack span{height:100%;}
+  .bars{display:flex; flex-direction:column; gap:2px;}
+  .bar{
+    display:grid; grid-template-columns:10px minmax(0,1fr) 70px 44px; align-items:center; gap:8px;
+    border:0; background:transparent; text-align:left; padding:5px 6px; border-radius:6px; font-size:13px;
+  }
+  .bar:hover{background:var(--surface-2);}
+  .bar[aria-pressed="true"]{background:var(--accent-soft);}
+  .bar .sw{width:10px; height:10px; border-radius:3px;}
+  .bar .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink);}
+  .bar .tr{height:6px; border-radius:3px; background:var(--surface-2); overflow:hidden;}
+  .bar .tr i{display:block; height:100%; border-radius:3px;}
+  .bar .v{text-align:right; font-weight:700; font-variant-numeric:tabular-nums;}
+  .bar .v small{display:block; font-weight:500; font-size:11px; color:var(--muted);}
+  .search{width:100%; border:1px solid var(--line); background:var(--surface-2); border-radius:8px; padding:8px 10px; font-size:13px;}
+  .listinfo{font-size:12px; color:var(--muted); margin:8px 0 4px;}
+  .slist{list-style:none; margin:0; padding:0;}
+  .slist li{border-bottom:1px solid var(--line);}
+  .slist li:last-child{border-bottom:0;}
+  .slist button{width:100%; text-align:left; border:0; background:none; padding:9px 2px; display:block;}
+  .slist button:hover .sn{color:var(--accent);}
+  .sn{font-weight:700; font-size:13.5px;}
+  .sc{font-size:12px; color:var(--ink-2);}
+  .sa{font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .more{width:100%; margin-top:8px; border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:8px; font-size:13px; font-weight:600;}
+  .pstate{padding:28px 18px; color:var(--ink-2); font-size:13.5px; line-height:1.6;}
+  .pstate b{color:var(--ink);}
+  .pstate.err{color:var(--err);}
+  .spinner{width:22px; height:22px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin-bottom:10px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion:reduce){ .spinner{animation-duration:2.4s;} }
+
+  /* ---------- 소상공인365 화면 ---------- */
+  .svcview{flex-direction:column;}
+  .svchead{background:var(--surface); border-bottom:1px solid var(--line); padding:12px 18px; display:flex; align-items:center; gap:14px;}
+  .svchead h2{margin:0; font-size:17px; font-weight:800; letter-spacing:-.01em;}
+  .svchead p{margin:0; font-size:13px; color:var(--ink-2); flex:1; min-width:0;}
+  .svchead a{flex:0 0 auto; font-size:13px; font-weight:600; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:6px 12px; border-radius:8px;}
+  .svchead a:hover{border-color:var(--accent);}
+  .frames{flex:1; position:relative; background:#fff;}
+  .frames iframe{position:absolute; inset:0; width:100%; height:100%; border:0;}
+  .frames iframe[hidden]{display:none;}
+
+  /* ---------- 모바일 ---------- */
+  @media (max-width:860px){
+    .app{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
+    .rail{flex-direction:row; align-items:center; gap:6px; padding:8px 10px; overflow-x:auto; overflow-y:hidden; border-right:0; border-bottom:1px solid var(--line);}
+    .logo{font-size:15px; padding:0 6px 0 2px; flex:0 0 auto;}
+    .logo span,.navgroup h3,.railnote,.navbtn .tag{display:none;}
+    .navgroup ul{display:flex; gap:4px;}
+    .navbtn{white-space:nowrap; padding:6px 10px; font-size:13px;}
+    .storeview{flex-direction:column;}
+    .mapcol{flex:0 0 52%;}
+    .panel{width:auto; flex:1; border-left:0; border-top:1px solid var(--line);}
+    .svchead p{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" id="rail" aria-label="메뉴">
+    <div class="logo">상권 스코프<span>서울 성동구</span></div>
+    <!-- 메뉴 항목은 아래 스크립트의 MENU에서 만들어집니다 -->
+    <p class="railnote" id="originNote"></p>
+  </nav>
+
+  <main class="main">
+    <!-- 지도·점포 조회 -->
+    <section class="view storeview" id="view-store" aria-label="지도·점포 조회">
+      <div class="mapcol">
+        <div class="maptools">
+          <div class="toolrow">
+            <span class="lbl">행정동</span>
+            <div class="chips" id="dongChips" role="group" aria-label="행정동 선택"></div>
+          </div>
+          <div class="toolrow">
+            <label class="toggle"><input type="checkbox" id="zoneToggle" checked> 상권 경계 보기</label>
+            <span class="zonestatus" id="zoneStatus"></span>
+          </div>
+        </div>
+        <div class="mapbox">
+          <div id="kakaoMap"></div>
+          <div class="mapfallback" id="mapFallback">
+            <b>카카오맵을 불러오지 못했습니다.</b>
+            <p>이 파일을 <code>http://localhost:8000</code> 에서 열었는지 확인하세요.<br>동 선택과 점포 목록은 지도 없이도 동작합니다.</p>
+          </div>
+          <div class="maphint" id="mapHint">점선 영역(상권)을 누르면 그 상권의 점포를 조회합니다</div>
+          <div class="zoomctl">
+            <button id="zoomIn" aria-label="확대">+</button>
+            <button id="zoomOut" aria-label="축소">–</button>
+          </div>
+        </div>
+      </div>
+      <aside class="panel" id="panel" aria-live="polite"></aside>
+    </section>
+
+    <!-- 소상공인365 서비스 (메뉴에서 고른 화면이 여기에 뜹니다) -->
+    <section class="view svcview" id="view-svc" aria-label="소상공인365">
+      <div class="svchead">
+        <h2 id="svcTitle"></h2>
+        <p id="svcDesc"></p>
+        <a id="svcOpen" target="_blank" rel="noopener">새 창에서 열기</a>
+      </div>
+      <div class="frames" id="frames"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =====================================================================
+     1) API 설정
+     ===================================================================== */
+
+  // 소상공인365 오픈API (bigdata.sbiz.or.kr) — 서비스별 인증키, iframe 방식
+  // 사용기간 2026-09-29 ~ 2026-12-30 · 등록 주소 http://localhost:8000
+  var SBIZ365 = {
+    base: "https://bigdata.sbiz.or.kr/#/openApi/",
+    services: {
+      simple:        { name:"간단분석",          desc:"위치와 업종만 고르면 예상매출과 상권 평가를 한 장으로 요약합니다.", key:"63f57bd8afcf8fe4ac10d48a732432769b0d03a36daeaff0c8fc494fb1508c34" },
+      detail:        { name:"상세분석",          desc:"위치·업종 기준 매출, 유동인구, 주거·직장인구, 소득·소비를 항목별로 자세히 봅니다.", key:"b122e2c2f948c78cff4310c10dfe324fad88822edafd042794a98c3c8d2afb24" },
+      slsIdex:       { name:"점포당 매출액 추이", desc:"지역·업종별 점포 한 곳당 평균 매출이 어떻게 변해왔는지 봅니다.", key:"db95489c9462e49277c6377375826e16f156944745a1b5f8acb945b6650a229f" },
+      weather:       { name:"창업기상도",        desc:"업종별 창업 여건을 날씨처럼 한눈에 비교합니다.", key:"df84a993fbc59fc9362b565c92daf88125c4932fdb65f15fdf34773cfbb1bf8d" },
+      storSttus:     { name:"업소현황",          desc:"업종별 점포 수와 증감을 봅니다.", key:"857f342588d11fe4315493a7924f65bf60225211b7244a73c192f0c5326b5f25" },
+      stcarSttus:    { name:"업력현황",          desc:"이 지역 점포들이 얼마나 오래 영업하고 있는지 봅니다.", key:"b7d47765de4f878fd8de7a99b44d121c4f396928a9b2bceeb8912a9220ed8af6" },
+      startupPublic: { name:"상권지도",          desc:"상권 경계와 업종 분포를 지도에서 봅니다.", key:"e6fe4d3838d378cf52cbeee1b0ebaf25fdb70fdf367f63c2195a511618dd9830" },
+      hpReport:      { name:"테마상권 분석",      desc:"테마로 묶인 상권의 특성을 봅니다.", key:"1514c3654b9261bc24b451f649a835828ebc9cbdcd9c88cac446c0f12cfb3f7a" },
+      delivery:      { name:"배달분석",          desc:"지역·업종별 배달 수요를 봅니다.", key:"4573a05b8cc07aaf44539203af58f8d70e2775c6c1dbf354a9d42a4a7e292537" },
+      tour:          { name:"관광·축제 정보",     desc:"주변 관광지와 축제 정보를 봅니다.", key:"23bf6fad89805177d7e37180a22c74d5a37db25070b101758da9afac38a84510" },
+      snsAnaly:      { name:"SNS 분석",          desc:"지역·업종 관련 SNS 언급량과 키워드를 봅니다.", key:"f50eaa03e302f69286a03c392ad0b0d26804e3bbee1beeb7fb809f1ebc355dca" }
+    }
+  };
+  function sbizUrl(id){ return SBIZ365.base+id+"?certKey="+SBIZ365.services[id].key; }
+
+  // 공공데이터포털 소상공인시장진흥공단 상가(상권)정보 OpenAPI — 실제 점포 데이터
+  var SDSC2 = {
+    base: "https://apis.data.go.kr/B553077/api/open/sdsc2",
+    serviceKey: "4168b0894efb3fb272400653b617ced5fdc2460b0f263c6f678360be4faf8f12"
+  };
+  var SIGNGU_CD = "11200";   // 성동구
+  var PAGE_SIZE = 1000, MAX_PAGES = 10;
+
+  // 왼쪽 메뉴 구성 (그룹 → 항목). "store"는 지도·점포 조회 화면입니다.
+  var MENU = [
+    { title:"우리 동네 점포", items:[ {id:"store", name:"지도·점포 조회", tag:"실데이터"} ] },
+    { title:"입지·매출",      items:["simple","detail","slsIdex"] },
+    { title:"업종·창업",      items:["weather","storSttus","stcarSttus"] },
+    { title:"상권 지도",      items:["startupPublic","hpReport"] },
+    { title:"수요·트렌드",    items:["delivery","tour","snsAnaly"] }
+  ];
+
+  // baroApi 실패 시 쓰는 기본 동 목록 (좌표는 대략적인 중심점)
+  var FALLBACK_DONGS = [
+    {name:"성수1가1동", lat:37.5433, lng:127.0418}, {name:"성수1가2동", lat:37.5478, lng:127.0455},
+    {name:"성수2가1동", lat:37.5462, lng:127.0540}, {name:"성수2가3동", lat:37.5412, lng:127.0556},
+    {name:"송정동", lat:37.5558, lng:127.0682},     {name:"용답동", lat:37.5638, lng:127.0512},
+    {name:"응봉동", lat:37.5522, lng:127.0338},     {name:"행당1동", lat:37.5593, lng:127.0345}
+  ];
+  var DEFAULT_DONG = "성수1가1동";
+
+  // 업종 대분류 색 (나오는 순서대로 배정)
+  var PALETTE = ["#136f5b","#d9482f","#3b6fd8","#c98a06","#8a4fc4","#0f93a8","#d0457f","#5c7a1f","#7a5a3a","#5b6472","#e07b39","#2f4f8f"];
+
+  /* =====================================================================
+     2) 공통 도우미
+     ===================================================================== */
+  function $(s,r){ return (r||document).querySelector(s); }
+  function fmt(n){ return Number(n||0).toLocaleString("ko-KR"); }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function normName(n){ return String(n||"").replace(/\s/g,"").replace(/제(\d)/g,"$1"); }
+
+  /* =====================================================================
+     3) 상가(상권)정보 API 호출
+     ===================================================================== */
+  function sdsc2Request(op, params){
+    params.type = "json";
+    var qs = Object.keys(params).map(function(k){ return encodeURIComponent(k)+"="+encodeURIComponent(params[k]); }).join("&");
+    var url = SDSC2.base+"/"+op+"?serviceKey="+encodeURIComponent(SDSC2.serviceKey)+"&"+qs;
+    return fetch(url).then(function(r){ return r.text(); }).then(function(text){
+      var json;
+      try{ json = JSON.parse(text); }
+      catch(e){
+        var m = text.match(/<(returnAuthMsg|resultMsg|errMsg)>([^<]+)</);
+        throw new Error(op+" 응답을 읽지 못했습니다: "+(m ? m[2] : text.slice(0,120)));
+      }
+      var root = json.response || json, header = root.header || {}, body = root.body || {};
+      var code = String(header.resultCode || "00");
+      if(code === "03") return {items:[], totalCount:0};
+      if(code !== "00") throw new Error(op+" 오류 "+code+": "+(header.resultMsg || "알 수 없음"));
+      var items = body.items && (body.items.item || body.items);
+      items = !items ? [] : (Array.isArray(items) ? items : [items]);
+      return {items:items, totalCount: parseInt(body.totalCount,10) || items.length};
+    });
+  }
+  function sdsc2All(op, params){
+    function page(n){ var p={}; for(var k in params) p[k]=params[k]; p.numOfRows=PAGE_SIZE; p.pageNo=n; return sdsc2Request(op,p); }
+    return page(1).then(function(first){
+      var pages = Math.min(Math.ceil(first.totalCount/PAGE_SIZE), MAX_PAGES), rest=[];
+      for(var n=2; n<=pages; n++) rest.push(page(n));
+      return Promise.all(rest).then(function(more){
+        var items = first.items.concat.apply(first.items, more.map(function(x){ return x.items; }));
+        return {items:items, totalCount:first.totalCount, truncated: items.length < first.totalCount};
+      });
+    });
+  }
+  var api = {
+    dongList:   function(){ return sdsc2Request("baroApi", {resId:"dong", catId:"admi", signguCd:SIGNGU_CD}).then(function(r){ return r.items; }); },
+    storesDong: function(cd){ return sdsc2All("storeListInDong", {divId:"adongCd", key:cd}); },
+    storesRad:  function(lat,lng,r){ return sdsc2All("storeListInRadius", {cx:lng, cy:lat, radius:Math.min(r||800,2000)}); },
+    storesZone: function(no){ return sdsc2All("storeListInArea", {key:no}); },
+    zonesRect:  function(a,b,c,d){ return sdsc2Request("storeZoneInRectangle", {minx:a, miny:b, maxx:c, maxy:d}).then(function(r){ return r.items; }); }
+  };
+
+  function parseWktRings(wkt){
+    if(!wkt || typeof wkt!=="string") return null;
+    var rings=[], re=/\(([^()]+)\)/g, m;
+    while((m = re.exec(wkt))){
+      var ring = m[1].split(",").map(function(pair){
+        var xy = pair.trim().split(/\s+/), x=parseFloat(xy[0]), y=parseFloat(xy[1]);
+        if(x < y){ var t=x; x=y; y=t; }
+        return {lat:y, lng:x};
+      }).filter(function(p){ return isFinite(p.lat) && isFinite(p.lng); });
+      if(ring.length >= 3) rings.push(ring);
+    }
+    if(!rings.length) return null;
+    var p0 = rings[0][0];
+    return (Math.abs(p0.lat)>90 || Math.abs(p0.lng)>180) ? null : rings;
+  }
+
+  /* =====================================================================
+     4) 메뉴 + 화면 전환 (주소 #store, #simple … 로 새로고침해도 유지)
+     ===================================================================== */
+  var rail = $("#rail"), originNote = $("#originNote");
+  MENU.forEach(function(g){
+    var wrap = document.createElement("div"); wrap.className = "navgroup";
+    wrap.innerHTML = "<h3>"+esc(g.title)+"</h3><ul>"+g.items.map(function(it){
+      var id = typeof it==="string" ? it : it.id;
+      var name = typeof it==="string" ? SBIZ365.services[it].name : it.name;
+      var tag = (typeof it!=="string" && it.tag) ? '<span class="tag">'+esc(it.tag)+'</span>' : "";
+      return '<li><button class="navbtn" data-go="'+id+'">'+esc(name)+tag+'</button></li>';
+    }).join("")+"</ul>";
+    rail.insertBefore(wrap, originNote);
+  });
+  rail.addEventListener("click", function(e){
+    var b = e.target.closest("[data-go]"); if(b) go(b.getAttribute("data-go"));
+  });
+
+  if(location.origin !== "http://localhost:8000"){
+    originNote.dataset.tone = "warn";
+    originNote.textContent = "지금 주소("+(location.origin==="null"?"file://":location.origin)+")는 인증키에 등록된 주소가 아니어서 지도와 소상공인365 화면이 비어 보일 수 있습니다. http://localhost:8000 에서 열어주세요.";
+  } else {
+    originNote.textContent = "소상공인365 화면 안에서 지역과 업종을 직접 고를 수 있습니다.";
+  }
+
+  var frames = $("#frames");
+  function go(id){
+    if(id!=="store" && !SBIZ365.services[id]) id = "store";
+    Array.prototype.forEach.call(document.querySelectorAll(".navbtn"), function(b){
+      if(b.getAttribute("data-go")===id) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+    });
+    $("#view-store").classList.toggle("on", id==="store");
+    $("#view-svc").classList.toggle("on", id!=="store");
+    if(id==="store"){ if(kmap) setTimeout(function(){ kmap.relayout(); }, 0); }
+    else {
+      var s = SBIZ365.services[id];
+      $("#svcTitle").textContent = s.name;
+      $("#svcDesc").textContent = s.desc;
+      $("#svcOpen").href = sbizUrl(id);
+      // 한 번 연 화면은 숨겨두고 재사용 → 다시 눌러도 입력한 조건이 그대로 남습니다
+      Array.prototype.forEach.call(frames.children, function(f){ f.hidden = f.dataset.svc!==id; });
+      if(!frames.querySelector('iframe[data-svc="'+id+'"]')){
+        var f = document.createElement("iframe");
+        f.dataset.svc = id; f.title = "소상공인365 "+s.name;
+        f.setAttribute("allow","geolocation; clipboard-write");
+        f.src = sbizUrl(id);
+        frames.appendChild(f);
+      }
+    }
+    if(location.hash.slice(1)!==id) history.replaceState(null,"","#"+id);
+  }
+
+  /* =====================================================================
+     5) 지도·점포 조회
+     ===================================================================== */
+  var state = { dongs: FALLBACK_DONGS.slice(), scope:null, stores:[], meta:null, lcls:null, scls:null, q:"", shown:60, reqSeq:0 };
+  var kmap = null, dotOverlays = [], tipOverlay = null, zonePolys = {}, zoneSeq = 0, zoneTimer = null;
+  var ZONE_MAX_LEVEL = 6;
+  var ZONE_STYLE = {
+    base:     {strokeWeight:1.5, strokeColor:"#136f5b", strokeOpacity:.85, strokeStyle:"shortdash", fillColor:"#136f5b", fillOpacity:.06, zIndex:3},
+    hover:    {strokeWeight:2, strokeOpacity:1, fillOpacity:.16},
+    selected: {strokeWeight:3, strokeColor:"#d9482f", strokeOpacity:1, strokeStyle:"solid", fillColor:"#d9482f", fillOpacity:.12}
+  };
+
+  /* --- 동 칩 --- */
+  var chipsEl = $("#dongChips");
+  function renderChips(){
+    chipsEl.innerHTML = state.dongs.map(function(d,i){
+      var on = state.scope && state.scope.type==="dong" && state.scope.name===d.name;
+      return '<button class="chip" data-i="'+i+'" aria-pressed="'+(on?"true":"false")+'">'+esc(d.name)+'</button>';
+    }).join("");
+  }
+  chipsEl.addEventListener("click", function(e){
+    var b = e.target.closest(".chip"); if(!b) return;
+    selectDong(state.dongs[+b.dataset.i]);
+  });
+
+  function loadDongList(){
+    return api.dongList().then(function(list){
+      if(!list.length) return;
+      var coords = {};
+      FALLBACK_DONGS.forEach(function(d){ coords[normName(d.name)] = d; });
+      state.dongs = list.map(function(a){
+        var c = coords[normName(a.adongNm)] || {};
+        return {name:a.adongNm, code:String(a.adongCd), lat:c.lat, lng:c.lng};
+      }).sort(function(a,b){ return a.name.localeCompare(b.name,"ko"); });
+    }).catch(function(err){
+      console.warn("[baroApi] 행정동 목록 실패 — 기본 8개 동, 반경 800m 조회로 동작:", err.message);
+    });
+  }
+
+  /* --- 조회 대상 선택 --- */
+  function selectDong(d){
+    clearZoneSelection();
+    var scope = {type:"dong", name:d.name, lat:d.lat, lng:d.lng};
+    if(d.code){ scope.label = "행정동 전체"; runQuery(scope, api.storesDong(d.code)); }
+    else { scope.label = "동 중심 반경 800m"; runQuery(scope, api.storesRad(d.lat, d.lng, 800)); }
+    if(kmap && d.lat) kmap.panTo(new kakao.maps.LatLng(d.lat, d.lng));
+  }
+  function selectZone(key){
+    var z = zonePolys[key]; if(!z) return;
+    clearZoneSelection();
+    z.poly.setOptions(ZONE_STYLE.selected);
+    runQuery({type:"zone", key:key, name:z.zone.name, label:"상권 · 번호 "+key}, api.storesZone(key));
+  }
+  function clearZoneSelection(){
+    if(state.scope && state.scope.type==="zone" && zonePolys[state.scope.key]){
+      zonePolys[state.scope.key].poly.setOptions(copy(ZONE_STYLE.base));
+    }
+  }
+  function copy(o){ var r={}; for(var k in o) r[k]=o[k]; return r; }
+
+  function runQuery(scope, promise){
+    var seq = ++state.reqSeq;
+    state.scope = scope; state.stores = []; state.lcls = null; state.scls = null; state.q = ""; state.shown = 60;
+    renderChips();
+    renderPanelLoading();
+    clearDots();
+    promise.then(function(res){
+      if(seq!==state.reqSeq) return;
+      state.stores = res.items || [];
+      state.meta = {total:res.totalCount || state.stores.length, truncated:!!res.truncated};
+      renderPanel(); drawDots(true);
+    }).catch(function(err){
+      if(seq!==state.reqSeq) return;
+      console.error("[상가업소정보 API]", err);
+      renderPanelError(err && err.message || String(err));
+    });
+  }
+
+  /* --- 결과 패널 --- */
+  var panel = $("#panel");
+  function scopeHead(){
+    var s = state.scope;
+    return '<div class="phead"><div class="kind">'+esc(s.type==="zone"?"상권":"행정동")+' · '+esc(s.label)+'</div><h2>'+esc(s.name)+'</h2>';
+  }
+  function renderPanelLoading(){
+    panel.innerHTML = scopeHead()+'</div><div class="pstate"><div class="spinner" role="status" aria-label="불러오는 중"></div>점포 데이터를 불러오는 중입니다.</div>';
+  }
+  function renderPanelError(msg){
+    panel.innerHTML = scopeHead()+'</div><div class="pstate err"><b>점포 데이터를 가져오지 못했습니다.</b><br>'+esc(msg)+
+      '<br><br>브라우저 콘솔(F12)에 CORS 오류가 보이면 공공데이터포털이 브라우저 직접 호출을 막은 것입니다. 작은 프록시 서버를 거치면 해결됩니다.</div>';
+  }
+
+  var lclsColor = {};
+  function colorFor(nm){
+    if(!lclsColor[nm]) lclsColor[nm] = PALETTE[Object.keys(lclsColor).length % PALETTE.length];
+    return lclsColor[nm];
+  }
+  function countBy(list, key){
+    var m = {};
+    list.forEach(function(s){ var k = s[key] || "기타"; m[k] = (m[k]||0)+1; });
+    return Object.keys(m).map(function(k){ return {name:k, n:m[k]}; }).sort(function(a,b){ return b.n-a.n; });
+  }
+  function filtered(){
+    var q = state.q.trim().toLowerCase();
+    return state.stores.filter(function(s){
+      if(state.lcls && (s.indsLclsNm||"기타")!==state.lcls) return false;
+      if(state.scls && (s.indsSclsNm||"기타")!==state.scls) return false;
+      if(q){
+        var hay = [s.bizesNm, s.indsMclsNm, s.indsSclsNm, s.rdnmAdr, s.lnoAdr].join(" ").toLowerCase();
+        if(hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+  }
+  function barRows(rows, total, pressedName, attr, colorFn){
+    var max = rows.length ? rows[0].n : 1;
+    return rows.map(function(r){
+      var c = colorFn(r.name), pct = Math.round(r.n/total*1000)/10;
+      return '<button class="bar" '+attr+'="'+esc(r.name)+'" aria-pressed="'+(pressedName===r.name?"true":"false")+'">'+
+        '<span class="sw" style="background:'+c+'"></span><span class="nm">'+esc(r.name)+'</span>'+
+        '<span class="tr"><i style="width:'+(r.n/max*100)+'%;background:'+c+'"></i></span>'+
+        '<span class="v">'+fmt(r.n)+'<small>'+pct+'%</small></span></button>';
+    }).join("");
+  }
+
+  function renderPanel(){
+    var st = state.stores, meta = state.meta;
+    if(!st.length){
+      panel.innerHTML = scopeHead()+'</div><div class="pstate">이 범위에는 등록된 점포가 없습니다. 다른 동이나 상권을 선택해보세요.</div>';
+      return;
+    }
+    var lrows = countBy(st, "indsLclsNm");
+    lrows.forEach(function(r){ colorFor(r.name); });
+    var html = scopeHead()+
+      '<div class="total">점포 <b class="tnum">'+fmt(meta.total)+'</b>곳</div>'+
+      '<div class="src">출처 소상공인시장진흥공단 상가(상권)정보'+(meta.truncated?' · 앞의 '+fmt(st.length)+'곳으로 집계':'')+'</div></div>';
+
+    html += '<div class="psec"><h4>업종 구성'+(state.lcls?'<button data-reset>전체 보기</button>':'')+'</h4>'+
+      '<div class="stack">'+lrows.map(function(r){ return '<span title="'+esc(r.name)+'" style="width:'+(r.n/st.length*100)+'%;background:'+colorFor(r.name)+'"></span>'; }).join("")+'</div>'+
+      '<div class="bars">'+barRows(lrows, st.length, state.lcls, "data-lcls", colorFor)+'</div></div>';
+
+    if(state.lcls){
+      var sub = st.filter(function(s){ return (s.indsLclsNm||"기타")===state.lcls; });
+      var srows = countBy(sub, "indsSclsNm").slice(0,12);
+      html += '<div class="psec"><h4>'+esc(state.lcls)+' 세부 업종 상위 '+srows.length+'개'+(state.scls?'<button data-reset-s>세부 해제</button>':'')+'</h4>'+
+        '<div class="bars">'+barRows(srows, sub.length, state.scls, "data-scls", function(){ return colorFor(state.lcls); })+'</div></div>';
+    }
+
+    html += '<div class="psec"><h4>점포 목록</h4><input class="search" id="storeSearch" type="search" placeholder="상호명, 업종, 주소로 찾기" value="'+esc(state.q)+'">'+
+      '<div id="listWrap"></div></div>';
+    panel.innerHTML = html;
+    renderList();
+  }
+
+  function renderList(){
+    var list = filtered(), wrap = $("#listWrap"); if(!wrap) return;
+    var shown = list.slice(0, state.shown);
+    var cond = [state.lcls, state.scls, state.q.trim() && "‘"+state.q.trim()+"’"].filter(Boolean).join(" › ");
+    wrap.innerHTML = '<div class="listinfo">'+(cond?esc(cond)+" · ":"")+fmt(list.length)+'곳</div>'+
+      '<ul class="slist">'+shown.map(function(s){
+        var i = state.stores.indexOf(s);
+        return '<li><button data-store="'+i+'"><div class="sn">'+esc(s.bizesNm||"-")+'</div>'+
+          '<div class="sc">'+esc([s.indsMclsNm, s.indsSclsNm].filter(Boolean).join(" › ")||"-")+(s.flrNo?' · '+esc(s.flrNo)+'층':'')+'</div>'+
+          '<div class="sa">'+esc(s.rdnmAdr||s.lnoAdr||"")+'</div></button></li>';
+      }).join("")+'</ul>'+
+      (list.length > state.shown ? '<button class="more" data-more>'+fmt(Math.min(60, list.length-state.shown))+'곳 더 보기</button>' : "");
+  }
+
+  panel.addEventListener("click", function(e){
+    var t;
+    if((t = e.target.closest("[data-lcls]"))){
+      var v = t.getAttribute("data-lcls");
+      state.lcls = state.lcls===v ? null : v; state.scls = null; state.shown = 60;
+      renderPanel(); drawDots(false);
+    } else if((t = e.target.closest("[data-scls]"))){
+      var w = t.getAttribute("data-scls");
+      state.scls = state.scls===w ? null : w; state.shown = 60;
+      renderPanel(); drawDots(false);
+    } else if(e.target.closest("[data-reset]")){
+      state.lcls = null; state.scls = null; state.shown = 60; renderPanel(); drawDots(false);
+    } else if(e.target.closest("[data-reset-s]")){
+      state.scls = null; state.shown = 60; renderPanel(); drawDots(false);
+    } else if(e.target.closest("[data-more]")){
+      state.shown += 60; renderList();
+    } else if((t = e.target.closest("[data-store]"))){
+      focusStore(state.stores[+t.getAttribute("data-store")]);
+    }
+  });
+  var searchTimer = null;
+  panel.addEventListener("input", function(e){
+    if(e.target.id!=="storeSearch") return;
+    state.q = e.target.value; state.shown = 60;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function(){ renderList(); drawDots(false); }, 150);
+  });
+
+  /* --- 지도 위 점포 점 (필터 결과 최대 1,500개) --- */
+  var MAX_DOTS = 1500;
+  function clearDots(){ dotOverlays.forEach(function(o){ o.setMap(null); }); dotOverlays = []; if(tipOverlay) tipOverlay.setMap(null); }
+  function drawDots(fit){
+    if(!kmap) return;
+    clearDots();
+    var list = filtered().filter(function(s){ return isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lon)); }).slice(0, MAX_DOTS);
+    var bounds = new kakao.maps.LatLngBounds();
+    list.forEach(function(s){
+      var el = document.createElement("div");
+      el.className = "sdot"; el.style.background = colorFor(s.indsLclsNm||"기타");
+      el.addEventListener("click", function(){ focusStore(s); });
+      var pos = new kakao.maps.LatLng(parseFloat(s.lat), parseFloat(s.lon));
+      var o = new kakao.maps.CustomOverlay({position:pos, content:el, zIndex:5});
+      o.setMap(kmap); o._store = s; dotOverlays.push(o);
+      bounds.extend(pos);
+    });
+    if(fit && list.length && state.scope.type==="dong") kmap.setBounds(bounds, 30, 30, 30, 30);
+  }
+  function focusStore(s){
+    if(!s) return;
+    dotOverlays.forEach(function(o){ o.getContent().classList.toggle("hl", o._store===s); });
+    if(!kmap || !isFinite(parseFloat(s.lat))) return;
+    var pos = new kakao.maps.LatLng(parseFloat(s.lat), parseFloat(s.lon));
+    if(!tipOverlay){ var el=document.createElement("div"); el.className="stip"; tipOverlay = new kakao.maps.CustomOverlay({content:el, yAnchor:1.7, zIndex:40}); }
+    tipOverlay.getContent().innerHTML = esc(s.bizesNm||"-")+"<small>"+esc(s.indsSclsNm||s.indsMclsNm||"")+"</small>";
+    tipOverlay.setPosition(pos); tipOverlay.setMap(kmap);
+    if(kmap.getLevel() > 3) kmap.setLevel(3);
+    kmap.panTo(pos);
+  }
+
+  /* --- 상권 경계 레이어 --- */
+  function setZoneStatus(txt, tone){ var el=$("#zoneStatus"); el.textContent = txt||""; el.dataset.tone = tone||""; }
+  function drawZone(item){
+    var key = String(item.trarNo);
+    if(zonePolys[key]) return true;
+    var rings = parseWktRings(item.coords); if(!rings) return false;
+    var zone = {name:item.mainTrarNm || ("상권 "+key)};
+    var opts = copy(ZONE_STYLE.base);
+    opts.path = rings.map(function(r){ return r.map(function(p){ return new kakao.maps.LatLng(p.lat,p.lng); }); });
+    var poly = new kakao.maps.Polygon(opts); poly.setMap(kmap);
+    zonePolys[key] = {poly:poly, zone:zone};
+    var isSel = function(){ return state.scope && state.scope.type==="zone" && state.scope.key===key; };
+    kakao.maps.event.addListener(poly, "mouseover", function(ev){ if(!isSel()) poly.setOptions(ZONE_STYLE.hover); showZoneTip(zone, ev.latLng); });
+    kakao.maps.event.addListener(poly, "mousemove", function(ev){ showZoneTip(zone, ev.latLng); });
+    kakao.maps.event.addListener(poly, "mouseout", function(){ if(!isSel()) poly.setOptions(copy(ZONE_STYLE.base)); if(zoneTip) zoneTip.setMap(null); });
+    kakao.maps.event.addListener(poly, "click", function(){ selectZone(key); });
+    if(isSel()) poly.setOptions(ZONE_STYLE.selected);
+    return true;
+  }
+  var zoneTip = null;
+  function showZoneTip(zone, latLng){
+    if(!zoneTip){ var el=document.createElement("div"); el.className="ztip"; zoneTip = new kakao.maps.CustomOverlay({content:el, yAnchor:1.6, zIndex:30}); }
+    zoneTip.getContent().textContent = zone.name; zoneTip.setPosition(latLng); zoneTip.setMap(kmap);
+  }
+  function loadZones(){
+    if(!kmap || !$("#zoneToggle").checked) return;
+    if(kmap.getLevel() > ZONE_MAX_LEVEL){ setZoneStatus("지도를 더 확대하면 상권 경계가 나타납니다"); return; }
+    var b = kmap.getBounds(), sw = b.getSouthWest(), ne = b.getNorthEast(), seq = ++zoneSeq;
+    setZoneStatus("상권 경계 불러오는 중…");
+    api.zonesRect(sw.getLng(), sw.getLat(), ne.getLng(), ne.getLat()).then(function(items){
+      if(seq!==zoneSeq || !$("#zoneToggle").checked) return;
+      var drawn = 0; items.forEach(function(it){ if(drawZone(it)) drawn++; });
+      setZoneStatus(items.length ? "화면 안 상권 "+drawn+"곳" : "이 화면에는 등록된 상권이 없습니다");
+    }).catch(function(err){
+      if(seq!==zoneSeq) return;
+      console.error("[상권영역]", err);
+      setZoneStatus("상권 경계를 불러오지 못했습니다: "+(err.message||err), "err");
+    });
+  }
+  $("#zoneToggle").addEventListener("change", function(e){
+    $("#mapHint").style.display = e.target.checked ? "" : "none";
+    if(e.target.checked){ loadZones(); return; }
+    zoneSeq++;
+    Object.keys(zonePolys).forEach(function(k){ zonePolys[k].poly.setMap(null); });
+    zonePolys = {}; if(zoneTip) zoneTip.setMap(null); setZoneStatus("");
+  });
+
+  /* --- 카카오맵 --- */
+  function initMap(){
+    kmap = new kakao.maps.Map($("#kakaoMap"), {center:new kakao.maps.LatLng(37.5445,127.0500), level:5});
+    kmap.setMinLevel(1); kmap.setMaxLevel(9);
+    kakao.maps.event.addListener(kmap, "idle", function(){ clearTimeout(zoneTimer); zoneTimer = setTimeout(loadZones, 300); });
+    loadZones();
+    if(state.stores.length) drawDots(true);
+  }
+  if(window.kakao && kakao.maps){ kakao.maps.load(initMap); }
+  else { $("#kakaoMap").style.display = "none"; $("#mapFallback").style.display = "flex"; $("#mapHint").style.display = "none"; }
+  $("#zoomIn").addEventListener("click", function(){ if(kmap) kmap.setLevel(kmap.getLevel()-1); });
+  $("#zoomOut").addEventListener("click", function(){ if(kmap) kmap.setLevel(kmap.getLevel()+1); });
+  window.addEventListener("resize", function(){ if(kmap) kmap.relayout(); });
+
+  /* =====================================================================
+     6) 시작: 화면 열고, 동 목록 받아서 기본 동을 바로 조회
+     ===================================================================== */
+  go(location.hash.slice(1) || "store");
+  renderChips();
+  panel.innerHTML = '<div class="pstate">동 목록을 불러오는 중입니다.</div>';
+  loadDongList().then(function(){
+    var first = state.dongs.filter(function(d){ return normName(d.name)===normName(DEFAULT_DONG); })[0] || state.dongs[0];
+    selectDong(first);
+  });
+})();
+</script>
+</body>
+</html>
