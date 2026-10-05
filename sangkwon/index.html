@@ -370,13 +370,10 @@
     var b = e.target.closest("[data-go]"); if(b) go(b.getAttribute("data-go"));
   });
 
-  ivar ALLOWED_ORIGINS = ["http://localhost:8000", "https://yeono1220.github.io"];
+  var ALLOWED_ORIGINS = ["http://localhost:8000", "https://yeono1220.github.io"];
   if(ALLOWED_ORIGINS.indexOf(location.origin) < 0){
     originNote.dataset.tone = "warn";
     originNote.textContent = "지금 주소("+(location.origin==="null"?"file://":location.origin)+")는 인증키에 등록된 주소가 아니어서 지도와 소상공인365 화면이 비어 보일 수 있습니다.";
-  } else {
-    originNote.dataset.tone = "warn";
-    originNote.textContent = "지금 주소("+(location.origin==="null"?"file://":location.origin)+")는 인증키에 등록된 주소가 아니어서 지도와 소상공인365 화면이 비어 보일 수 있습니다. http://localhost:8000 에서 열어주세요.";
   } else {
     originNote.textContent = "소상공인365 화면 안에서 지역과 업종을 직접 고를 수 있습니다.";
   }
